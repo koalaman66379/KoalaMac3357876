@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gestor de Proxies V2Ray / NapsternetV</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #121212;
+      color: #f1f1f1;
+      padding: 20px;
+    }
+    h1 {
+      color: #00e676;
+      text-align: center;
+    }
+    .controls {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .controls button {
+      margin: 5px;
+      padding: 10px 15px;
+      font-weight: bold;
+      border-radius: 5px;
+      border: none;
+      background: #00e676;
+      color: #000;
+      cursor: pointer;
+    }
+    .controls button:hover {
+      background: #00c853;
+    }
+    .controls textarea {
+      width: 100%;
+      height: 150px;
+      margin-top: 10px;
+      background: #2e2e2e;
+      color: #fff;
+      border: 1px solid #444;
+      padding: 10px;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    .proxy {
+      background: #1e1e1e;
+      padding: 10px 15px 15px;
+      margin-bottom: 15px;
+      border-left: 5px solid #00e676;
+      border-radius: 6px;
+      position: relative;
+    }
+    .proxy textarea {
+      width: 100%;
+      background: #2b2b2b;
+      border: 1px solid #444;
+      color: #eee;
+      padding: 8px;
+      margin-top: 5px;
+      border-radius: 4px;
+      resize: vertical;
+    }
+    .proxy .actions {
+      margin-top: 10px;
+      display: flex;
+      gap: 10px;
+    }
+    .proxy .actions button {
+      flex: 1;
+      padding: 5px 10px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      border-radius: 4px;
+    }
+    .copy-btn { background: #00e676; color: #000; }
+    .edit-btn { background: #ffc107; color: #000; }
+    .delete-btn { background: #e53935; color: #fff; }
+    .save-btn { background: #29b6f6; color: #000; }
+  </style>
+</head>
+<body>
+
+  <h1>GENERATOR PROXY INTERNET KOALA PRO</h1>
+
+  <div class="controls">
+    <button onclick="loadFromText()">📥 Cargar JSON</button>
+    <button onclick="generarProxies()">🚀 Ejecutar Generador</button>
+    <button onclick="borrarTodo()">🗑️ Borrar todo</button>
+    <button onclick="descargarTxt()">⬇️ Descargar .txt</button>
+    <button onclick="descargarJson()">⬇️ Descargar .json</button>
+    <textarea id="jsonInput" placeholder='Pega aquí el JSON... Ej:
+[
+  { "emoji": "🪶", "link": "vless://..." }
+]'></textarea>
+  </div>
+
+  <div id="proxyList"></div>
+
+  <script>
+    const LOCAL_KEY = "servidoresVless";
+
+    function guardarLocalmente(data) {
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+    }
+
+    function obtenerGuardados() {
+      return JSON.parse(localStorage.getItem(LOCAL_KEY)) || [];
+    }
+
+    function copyText(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert("✅ Copiado al portapapeles");
+      });
+    }
+
+    function renderProxies() {
+      const data = obtenerGuardados();
+      const container = document.getElementById("proxyList");
+      container.innerHTML = "";
+
+      data.forEach(({ emoji, link }, index) => {
+        const div = document.createElement("div");
+        div.className = "proxy";
+
+        const textarea = document.createElement("textarea");
+        textarea.value = `${emoji} ${link}`;
+        textarea.disabled = true;
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        const copyBtn = document.createElement("button");
+        copyBtn.textContent = "Copiar";
+        copyBtn.className = "copy-btn";
+        copyBtn.onclick = () => copyText(textarea.value);
+
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "Editar";
+        editBtn.className = "edit-btn";
+        editBtn.onclick = () => {
+          textarea.disabled = false;
+          saveBtn.style.display = "inline";
+        };
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "Eliminar";
+        deleteBtn.className = "delete-btn";
+        deleteBtn.onclick = () => {
+          const datos = obtenerGuardados();
+          datos.splice(index, 1);
+          guardarLocalmente(datos);
+          renderProxies();
+        };
+
+        const saveBtn = document.createElement("button");
+        saveBtn.textContent = "Guardar";
+        saveBtn.className = "save-btn";
+        saveBtn.style.display = "none";
+        saveBtn.onclick = () => {
+          const nuevoTexto = textarea.value.trim();
+          const espacio = nuevoTexto.indexOf(" ");
+          if (espacio === -1) return alert("⚠️ Formato inválido. Usa 'emoji enlace'");
+          const emoji = nuevoTexto.slice(0, espacio);
+          const link = nuevoTexto.slice(espacio + 1);
+          const datos = obtenerGuardados();
+          datos[index] = { emoji, link };
+          guardarLocalmente(datos);
+          renderProxies();
+        };
+
+        actions.appendChild(copyBtn);
+        actions.appendChild(editBtn);
+        actions.appendChild(saveBtn);
+        actions.appendChild(deleteBtn);
+
+        div.appendChild(textarea);
+        div.appendChild(actions);
+        container.appendChild(div);
+      });
+    }
+
+    function loadFromText() {
+      const text = document.getElementById("jsonInput").value;
+      try {
+        const data = JSON.parse(text);
+        if (!Array.isArray(data)) throw new Error("Debe ser un arreglo.");
+        guardarLocalmente(data);
+        renderProxies();
+      } catch (err) {
+        alert("⚠️ JSON inválido: " + err.message);
+      }
+    }
+
+    function borrarTodo() {
+      if (confirm("¿Seguro que deseas borrar todos los servidores?")) {
+        localStorage.removeItem(LOCAL_KEY);
+        renderProxies();
+      }
+    }
+
+    function descargarTxt() {
+      const datos = obtenerGuardados();
+      if (datos.length === 0) {
+        alert("⚠️ No hay servidores para descargar.");
+        return;
+      }
+      const contenido = datos.map(item => item.link).join("\n");
+      const blob = new Blob([contenido], { type: "text/plain;charset=utf-8" });
+      const enlace = document.createElement("a");
+      enlace.href = URL.createObjectURL(blob);
+      enlace.download = "proxies_vless.txt";
+      enlace.click();
+    }
+
+    function descargarJson() {
+      const datos = obtenerGuardados();
+      if (datos.length === 0) {
+        alert("⚠️ No hay datos para descargar.");
+        return;
+      }
+      const blob = new Blob([JSON.stringify(datos, null, 2)], { type: "application/json" });
+      const enlace = document.createElement("a");
+      enlace.href = URL.createObjectURL(blob);
+      enlace.download = "proxies_vless.json";
+      enlace.click();
+    }
+
+    async function fetchAndProcess(url) {
+      try {
+        const res = await fetch(url);
+        let text = await res.text();
+
+        // Intentar decodificar si es Base64
+        try {
+          text = atob(text);
+        } catch {}
+
+        const lines = text.split(/\r?\n/);
+        return lines.filter(line => line.startsWith("vless://")).map(link => ({
+          emoji: "🌐",
+          link
+        }));
+      } catch (err) {
+        console.error(`Error fetching from ${url}:`, err);
+        return [];
+      }
+    }
+
+    async function generarProxies() {
+      const urls = [
+        "https://v2rayfree.eu.org/ ",
+        "https://sub.v2rayssr.com/ "
+      ];
+
+      let nuevosProxies = [];
+
+      for (const url of urls) {
+        const proxies = await fetchAndProcess(url);
+        nuevosProxies = [...nuevosProxies, ...proxies];
+      }
+
+      if (nuevosProxies.length === 0) {
+        alert("⚠️ No se encontraron proxies válidos.");
+        return;
+      }
+
+      const guardados = obtenerGuardados();
+      const unicos = nuevosProxies.filter(p => !guardados.some(g => g.link === p.link));
+
+      if (unicos.length === 0) {
+        alert("🚫 Ya tienes estos proxies cargados.");
+        return;
+      }
+
+      guardarLocalmente([...guardados, ...unicos]);
+      renderProxies();
+      alert(`✅ Se agregaron ${unicos.length} nuevos proxies.`);
+    }
+
+    window.onload = () => {
+      renderProxies();
+    };
+  </script>
+</body>
+</html>
